@@ -5,8 +5,6 @@ import {
   Heart,
   CheckCircle2,
   MapPin,
-  Plane,
-  TrendingUp,
   RefreshCw,
   BarChart3,
   Trophy,
@@ -133,13 +131,6 @@ export default function StatisticsPage() {
     loadStatistics()
   }, [loadStatistics])
 
-  const totalDestinations = stats.wishlist + stats.visited
-
-  const progress =
-    totalDestinations > 0
-      ? Math.round((stats.visited / totalDestinations) * 100)
-      : 0
-
   const totalPlacesByCountry = placeCountryStats.reduce(
     (total, country) => total + country.count,
     0
@@ -183,8 +174,8 @@ export default function StatisticsPage() {
   }
 
   return (
-    <section>
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <section className="min-w-0">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="font-heading text-2xl font-bold">
             Statistik Perjalanan
@@ -219,129 +210,95 @@ export default function StatisticsPage() {
         </div>
       )}
 
-      {/* SUMMARY CARDS */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* EMPAT KARTU STATISTIK - GRID 2 X 2 */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {cards.map((card) => {
           const Icon = card.icon
 
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-[#e9e5da] bg-white p-5"
+              className="flex min-h-[112px] min-w-0 items-center justify-between gap-2 rounded-2xl border border-[#e9e5da] bg-white p-3 sm:min-h-[140px] sm:p-5"
             >
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">{card.label}</p>
-                <div className={`rounded-xl p-3 ${card.color}`}>
-                  <Icon size={21} />
-                </div>
+              <div className="flex min-w-0 flex-col justify-center">
+                <p className="break-words text-xs text-gray-500 sm:text-sm">
+                  {card.label}
+                </p>
+                <p className="mt-2 font-heading text-2xl font-bold sm:text-3xl">
+                  {card.value}
+                </p>
               </div>
 
-              <p className="mt-4 font-heading text-3xl font-bold">
-                {card.value}
-              </p>
+              <div className={`shrink-0 rounded-xl p-2 sm:p-3 ${card.color}`}>
+                <Icon size={19} className="sm:hidden" />
+                <Icon size={22} className="hidden sm:block" />
+              </div>
             </div>
           )
         })}
       </div>
 
-      {/* PROGRESS AND DESTINATION COUNTRIES */}
-      <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        <div className="rounded-2xl border border-[#e9e5da] bg-white p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-[#e8f0e7] p-3 text-[#477b50]">
-              <TrendingUp size={21} />
-            </div>
-            <div>
-              <h3 className="font-heading font-bold">
-                Progress Perjalanan
-              </h3>
-              <p className="mt-1 text-xs text-gray-500">
-                Destinasi yang sudah dikunjungi
-              </p>
-            </div>
+      {/* NEGARA DIKUNJUNGI */}
+      <div className="mt-6 rounded-2xl border border-[#e9e5da] bg-white p-4 sm:p-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-[#f3eee4] p-3 text-[#8a7655]">
+            <Globe2 size={21} />
           </div>
 
-          <div className="mt-7 flex items-end justify-between">
-            <p className="font-heading text-4xl font-bold">
-              {progress}%
+          <div>
+            <h3 className="font-heading font-bold">
+              Negara Dikunjungi
+            </h3>
+            <p className="mt-1 text-xs text-gray-500">
+              Berdasarkan destinasi berstatus Visited
             </p>
-            <p className="text-sm text-gray-500">
-              {stats.visited} dari {totalDestinations} destinasi
-            </p>
-          </div>
-
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#edf0e8]">
-            <div
-              className="h-full rounded-full bg-[#477b50] transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          <div className="mt-5 flex justify-between text-xs text-gray-500">
-            <span>Wishlist: {stats.wishlist}</span>
-            <span>Visited: {stats.visited}</span>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#e9e5da] bg-white p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-[#f3eee4] p-3 text-[#8a7655]">
-              <Plane size={21} />
-            </div>
-            <div>
-              <h3 className="font-heading font-bold">
-                Negara Dikunjungi
-              </h3>
-              <p className="mt-1 text-xs text-gray-500">
-                Berdasarkan destinasi berstatus Visited
-              </p>
-            </div>
-          </div>
-
-          {countryStats.length === 0 ? (
-            <p className="py-10 text-center text-sm text-gray-400">
-              Belum ada negara yang dikunjungi.
-            </p>
-          ) : (
-            <div className="mt-5 space-y-4">
-              {countryStats.map((country) => (
-                <div key={country.name}>
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="font-medium">{country.name}</span>
-                    <span className="text-gray-500">
-                      {country.count} destinasi
-                    </span>
-                  </div>
-
-                  <div className="h-2 overflow-hidden rounded-full bg-[#edf0e8]">
-                    <div
-                      className="h-full rounded-full bg-[#244C3A]"
-                      style={{
-                        width: `${
-                          (country.count /
-                            Math.max(
-                              ...countryStats.map((item) => item.count)
-                            )) *
-                          100
-                        }%`,
-                      }}
-                    />
-                  </div>
+        {countryStats.length === 0 ? (
+          <p className="py-10 text-center text-sm text-gray-400">
+            Belum ada negara yang dikunjungi.
+          </p>
+        ) : (
+          <div className="mt-5 space-y-4">
+            {countryStats.map((country) => (
+              <div key={country.name}>
+                <div className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
+                  <span className="font-medium">{country.name}</span>
+                  <span className="text-gray-500">
+                    {country.count} destinasi
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+
+                <div className="h-2 overflow-hidden rounded-full bg-[#edf0e8]">
+                  <div
+                    className="h-full rounded-full bg-[#244C3A]"
+                    style={{
+                      width: `${
+                        (country.count /
+                          Math.max(
+                            ...countryStats.map((item) => item.count)
+                          )) *
+                        100
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* PLACES BY COUNTRY */}
-      <div className="mt-6 rounded-2xl border border-[#e9e5da] bg-white p-6">
+      {/* STATISTIK PLACES PER NEGARA */}
+      <div className="mt-6 rounded-2xl border border-[#e9e5da] bg-white p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-[#e8edf5] p-3 text-[#5478aa]">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0 rounded-xl bg-[#e8edf5] p-3 text-[#5478aa]">
               <BarChart3 size={21} />
             </div>
-            <div>
+
+            <div className="min-w-0">
               <h3 className="font-heading font-bold">
                 Statistik Places per Negara
               </h3>
@@ -352,7 +309,9 @@ export default function StatisticsPage() {
           </div>
 
           <div className="text-right">
-            <p className="text-xs text-gray-500">Total Places dengan negara</p>
+            <p className="text-xs text-gray-500">
+              Total Places dengan negara
+            </p>
             <p className="font-heading text-2xl font-bold">
               {totalPlacesByCountry}
             </p>
@@ -373,17 +332,19 @@ export default function StatisticsPage() {
           <>
             {topPlaceCountry && (
               <div className="mt-6 flex items-center gap-3 rounded-xl bg-[#edf0e8] p-4">
-                <div className="rounded-xl bg-white p-3 text-[#244C3A]">
+                <div className="shrink-0 rounded-xl bg-white p-3 text-[#244C3A]">
                   <Trophy size={21} />
                 </div>
-                <div>
+
+                <div className="min-w-0">
                   <p className="text-xs text-gray-500">
                     Negara dengan Places terbanyak
                   </p>
-                  <p className="mt-1 font-semibold text-[#244C3A]">
+                  <p className="mt-1 break-words font-semibold text-[#244C3A]">
                     {topPlaceCountry.name}
                   </p>
                 </div>
+
                 <p className="ml-auto font-heading text-xl font-bold text-[#244C3A]">
                   {topPlaceCountry.count}
                 </p>

@@ -41,7 +41,8 @@ export default function PlaceForm({
     description: initialData?.description ?? '',
     latitude: initialData?.latitude?.toString() ?? '',
     longitude: initialData?.longitude?.toString() ?? '',
-    visited_at: initialData?.visited_at?.slice(0, 10) ??
+    visited_at:
+      initialData?.visited_at?.slice(0, 10) ??
       new Date().toISOString().slice(0, 10),
   })
 
@@ -74,11 +75,38 @@ export default function PlaceForm({
     return () => URL.revokeObjectURL(objectUrl)
   }, [photoFile])
 
+  const selectedCountry = countries.find(
+    (country) => country.id === form.country_id
+  )
+
+  const isIndonesia =
+    selectedCountry?.name.trim().toLowerCase() === 'indonesia'
+
   function updateField(
     field: keyof typeof form,
     value: string
   ) {
-    setForm((current) => ({ ...current, [field]: value }))
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  function handleCountryChange(countryId: string) {
+    const country = countries.find(
+      (item) => item.id === countryId
+    )
+
+    const selectedIsIndonesia =
+      country?.name.trim().toLowerCase() === 'indonesia'
+
+    setForm((current) => ({
+      ...current,
+      country_id: countryId,
+      province_id: selectedIsIndonesia
+        ? current.province_id
+        : '',
+    }))
   }
 
   function handlePhotoChange(file: File | undefined) {
@@ -104,12 +132,18 @@ export default function PlaceForm({
     setPhotoFile(file)
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault()
     setSaving(true)
     setError('')
 
     try {
+      if (!form.country_id) {
+        throw new Error('Silakan pilih negara terlebih dahulu.')
+      }
+
       let photoUrl = initialData?.photo_url ?? null
 
       if (photoFile) {
@@ -131,16 +165,19 @@ export default function PlaceForm({
         throw new Error('Koordinat harus berupa angka yang valid.')
       }
 
-      if (
-        (latitude === null) !== (longitude === null)
-      ) {
-        throw new Error('Isi latitude dan longitude secara bersamaan.')
+      if ((latitude === null) !== (longitude === null)) {
+        throw new Error(
+          'Isi latitude dan longitude secara bersamaan.'
+        )
       }
 
       const place = {
         name: form.name.trim(),
-        country_id: form.country_id || null,
-        province_id: form.province_id || null,
+        country_id: form.country_id,
+        // Provinsi hanya boleh disimpan jika negara adalah Indonesia.
+        province_id: isIndonesia
+          ? form.province_id || null
+          : null,
         city: form.city.trim() || null,
         address: form.address.trim() || null,
         description: form.description.trim() || null,
@@ -226,16 +263,19 @@ export default function PlaceForm({
           <input
             type="date"
             value={form.visited_at}
-            onChange={(e) => updateField('visited_at', e.target.value)}
+            onChange={(e) =>
+              updateField('visited_at', e.target.value)
+            }
             className={inputClass}
           />
         </label>
 
         <label className="space-y-2 text-sm font-semibold">
-          Negara
+          Negara *
           <select
+            required
             value={form.country_id}
-            onChange={(e) => updateField('country_id', e.target.value)}
+            onChange={(e) => handleCountryChange(e.target.value)}
             className={inputClass}
             disabled={loadingLocations}
           >
@@ -248,23 +288,26 @@ export default function PlaceForm({
           </select>
         </label>
 
-{countries.find((country) => country.id === form.country_id)?.name === 'Indonesia' && (
-  <div>
-    <label>Provinsi</label>
-    <select
-    className="w-full rounded-xl border border-[#e9e5da] bg-white px-4 py-3 text-sm outline-none focus:border-[#244C3A]"
-      value={form.province_id}
-      onChange={(e) => updateField('province_id', e.target.value)}
-    >
-      <option value="">Pilih Provinsi</option>
-      {provinces.map((province) => (
-        <option key={province.id} value={province.id}>
-          {province.name}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
+        {isIndonesia && (
+          <label className="space-y-2 text-sm font-semibold">
+            Provinsi
+            <select
+              className={inputClass}
+              value={form.province_id}
+              onChange={(e) =>
+                updateField('province_id', e.target.value)
+              }
+              disabled={loadingLocations}
+            >
+              <option value="">Pilih Provinsi</option>
+              {provinces.map((province) => (
+                <option key={province.id} value={province.id}>
+                  {province.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="space-y-2 text-sm font-semibold">
           Kota
@@ -316,7 +359,9 @@ export default function PlaceForm({
         <textarea
           rows={3}
           value={form.description}
-          onChange={(e) => updateField('description', e.target.value)}
+          onChange={(e) =>
+            updateField('description', e.target.value)
+          }
           placeholder="Ceritakan sedikit tentang tempat ini..."
           className={inputClass}
         />
@@ -345,7 +390,9 @@ export default function PlaceForm({
             type="file"
             accept="image/jpeg,image/png,image/webp"
             className="hidden"
-            onChange={(e) => handlePhotoChange(e.target.files?.[0])}
+            onChange={(e) =>
+              handlePhotoChange(e.target.files?.[0])
+            }
           />
         </label>
 
@@ -365,7 +412,7 @@ export default function PlaceForm({
 
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || loadingLocations}
           className="flex items-center gap-2 rounded-xl bg-[#244C3A] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Save size={16} />

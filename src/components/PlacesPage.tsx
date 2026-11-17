@@ -17,7 +17,12 @@ import {
 } from 'lucide-react'
 import { getPlaces, type Place } from '../lib/placesApi'
 
-type SortOption = 'newest' | 'name-asc' | 'name-desc' | 'visited-newest' | 'visited-oldest'
+type SortOption =
+  | 'newest'
+  | 'name-asc'
+  | 'name-desc'
+  | 'visited-newest'
+  | 'visited-oldest'
 
 export default function PlacesPage() {
   const [places, setPlaces] = useState<Place[]>([])
@@ -75,6 +80,9 @@ export default function PlacesPage() {
     const keyword = search.toLowerCase().trim()
 
     const filtered = places.filter((place) => {
+      const isIndonesia =
+        place.countries?.name?.trim().toLowerCase() === 'indonesia'
+
       const matchesSearch =
         !keyword ||
         [
@@ -83,7 +91,7 @@ export default function PlacesPage() {
           place.address,
           place.description,
           place.countries?.name,
-          place.provinces?.name,
+          isIndonesia ? place.provinces?.name : null,
         ]
           .filter(Boolean)
           .join(' ')
@@ -91,7 +99,8 @@ export default function PlacesPage() {
           .includes(keyword)
 
       const matchesCountry =
-        !selectedCountry || place.countries?.name === selectedCountry
+        !selectedCountry ||
+        place.countries?.name === selectedCountry
 
       return matchesSearch && matchesCountry
     })
@@ -105,7 +114,9 @@ export default function PlacesPage() {
           return b.name.localeCompare(a.name, 'id')
 
         case 'visited-newest':
-          return (b.visited_at || '').localeCompare(a.visited_at || '')
+          return (b.visited_at || '').localeCompare(
+            a.visited_at || ''
+          )
 
         case 'visited-oldest':
           return (a.visited_at || '9999-12-31').localeCompare(
@@ -114,7 +125,9 @@ export default function PlacesPage() {
 
         case 'newest':
         default:
-          return (b.created_at || '').localeCompare(a.created_at || '')
+          return (b.created_at || '').localeCompare(
+            a.created_at || ''
+          )
       }
     })
   }, [places, search, selectedCountry, sortBy])
@@ -140,11 +153,26 @@ export default function PlacesPage() {
     search.trim() || selectedCountry || sortBy !== 'newest'
   )
 
+  function getPlaceLocation(place: Place) {
+    const isIndonesia =
+      place.countries?.name?.trim().toLowerCase() === 'indonesia'
+
+    return [
+      place.city,
+      isIndonesia ? place.provinces?.name : null,
+      place.countries?.name,
+    ]
+      .filter(Boolean)
+      .join(', ') || 'Lokasi belum diisi'
+  }
+
   return (
-    <section>
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <section className="min-w-0">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-heading text-2xl font-bold">Places</h2>
+          <h2 className="font-heading text-2xl font-bold">
+            Places
+          </h2>
           <p className="mt-2 text-sm text-gray-500">
             Kumpulan tempat menarik yang pernah kamu kunjungi.
           </p>
@@ -153,59 +181,54 @@ export default function PlacesPage() {
         <button
           onClick={loadData}
           disabled={loading}
-          className="flex items-center gap-2 rounded-xl border border-[#e9e5da] bg-white px-4 py-3 text-sm font-semibold transition hover:bg-[#f5f4ef] disabled:opacity-50"
+          className="flex shrink-0 items-center gap-2 rounded-xl border border-[#e9e5da] bg-white px-4 py-3 text-sm font-semibold transition hover:bg-[#f5f4ef] disabled:opacity-50"
         >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw
+            size={16}
+            className={loading ? 'animate-spin' : ''}
+          />
           Refresh
         </button>
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#e9e5da] bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Places</p>
-              <p className="mt-2 font-heading text-3xl font-bold">
-                {places.length}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#edf0e8] p-3 text-[#244C3A]">
-              <MapPin size={22} />
-            </div>
+      {/* TOTAL PLACES */}
+      <div className="mb-5 rounded-2xl border border-[#e9e5da] bg-white p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-gray-500">
+              Total Places
+            </p>
+            <p className="mt-1 font-heading text-3xl font-bold">
+              {places.length}
+            </p>
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-[#e9e5da] bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Hasil filter</p>
-              <p className="mt-2 font-heading text-3xl font-bold">
-                {filteredPlaces.length}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#f3eee4] p-3 text-[#8a7655]">
-              <Compass size={22} />
-            </div>
+          <div className="rounded-xl bg-[#edf0e8] p-3 text-[#244C3A]">
+            <MapPin size={22} />
           </div>
         </div>
       </div>
 
       {/* SEARCH, FILTER NEGARA, DAN SORTING */}
-      <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_220px_240px]">
-        <div className="flex items-center gap-3 rounded-xl border border-[#e9e5da] bg-white px-4 py-3">
-          <Search size={18} className="shrink-0 text-gray-400" />
+      <div className="mb-5 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_240px]">
+        <div className="flex min-w-0 items-center gap-3 rounded-xl border border-[#e9e5da] bg-white px-4 py-3 sm:col-span-2 xl:col-span-1">
+          <Search
+            size={18}
+            className="shrink-0 text-gray-400"
+          />
+
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari nama tempat, kota, atau negara..."
-            className="w-full bg-transparent text-sm outline-none"
+            className="w-full min-w-0 bg-transparent text-sm outline-none"
           />
 
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="text-gray-400 transition hover:text-gray-700"
+              className="shrink-0 text-gray-400 transition hover:text-gray-700"
               aria-label="Hapus pencarian"
             >
               <X size={17} />
@@ -213,11 +236,12 @@ export default function PlacesPage() {
           )}
         </div>
 
-        <div className="relative">
+        <div className="relative min-w-0">
           <Globe2
             size={17}
             className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#244C3A]"
           />
+
           <select
             value={selectedCountry}
             onChange={(e) => setSelectedCountry(e.target.value)}
@@ -230,20 +254,24 @@ export default function PlacesPage() {
               </option>
             ))}
           </select>
+
           <ChevronDown
             size={17}
             className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
           />
         </div>
 
-        <div className="relative">
+        <div className="relative min-w-0">
           <ArrowUpDown
             size={17}
             className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#244C3A]"
           />
+
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            onChange={(e) =>
+              setSortBy(e.target.value as SortOption)
+            }
             className="w-full appearance-none rounded-xl border border-[#e9e5da] bg-white py-3 pl-11 pr-10 text-sm outline-none transition focus:border-[#244C3A]"
           >
             <option value="newest">Terbaru ditambahkan</option>
@@ -252,6 +280,7 @@ export default function PlacesPage() {
             <option value="visited-newest">Kunjungan terbaru</option>
             <option value="visited-oldest">Kunjungan terlama</option>
           </select>
+
           <ChevronDown
             size={17}
             className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -259,37 +288,11 @@ export default function PlacesPage() {
         </div>
       </div>
 
+      {/* FILTER AKTIF RINGKAS */}
       {hasActiveFilter && (
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-            Filter aktif:
-
-            {selectedCountry && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#e5ebdf] px-3 py-1 font-semibold text-[#244C3A]">
-                <Globe2 size={12} />
-                {selectedCountry}
-              </span>
-            )}
-
-            {search.trim() && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#f3eee4] px-3 py-1 font-semibold text-[#8a7655]">
-                <Search size={12} />
-                {search}
-              </span>
-            )}
-
-            {sortBy !== 'newest' && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#edf0e8] px-3 py-1 font-semibold text-[#244C3A]">
-                <ArrowUpDown size={12} />
-                {sortBy === 'name-asc'
-                  ? 'Nama A–Z'
-                  : sortBy === 'name-desc'
-                    ? 'Nama Z–A'
-                    : sortBy === 'visited-newest'
-                      ? 'Kunjungan terbaru'
-                      : 'Kunjungan terlama'}
-              </span>
-            )}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-gray-500">
+            {filteredPlaces.length} hasil ditemukan
           </p>
 
           <button
@@ -298,7 +301,7 @@ export default function PlacesPage() {
             className="flex items-center gap-1 text-xs font-semibold text-[#244C3A] transition hover:underline"
           >
             <X size={14} />
-            Reset filter
+            Reset
           </button>
         </div>
       )}
@@ -319,15 +322,23 @@ export default function PlacesPage() {
         </div>
       ) : filteredPlaces.length === 0 ? (
         <div className="rounded-2xl border border-[#e9e5da] bg-white px-5 py-16 text-center">
-          <Compass size={35} className="mx-auto text-[#b8b9a9]" />
+          <Compass
+            size={35}
+            className="mx-auto text-[#b8b9a9]"
+          />
+
           <h3 className="mt-4 font-semibold">
-            {hasActiveFilter ? 'Tempat tidak ditemukan' : 'Belum ada Places'}
+            {hasActiveFilter
+              ? 'Tempat tidak ditemukan'
+              : 'Belum ada Places'}
           </h3>
+
           <p className="mt-2 text-sm text-gray-400">
             {hasActiveFilter
               ? 'Tidak ada tempat yang cocok dengan pencarian atau filter yang dipilih.'
               : 'Tempat yang sudah kamu simpan akan muncul di sini.'}
           </p>
+
           {hasActiveFilter && (
             <button
               type="button"
@@ -344,13 +355,13 @@ export default function PlacesPage() {
             Menampilkan {filteredPlaces.length} dari {places.length} tempat
           </p>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid min-w-0 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPlaces.map((place) => (
               <button
                 key={place.id}
                 type="button"
                 onClick={() => setSelectedPlace(place)}
-                className="group overflow-hidden rounded-2xl border border-[#e9e5da] bg-white text-left transition duration-200 hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#244C3A]"
+                className="group min-w-0 overflow-hidden rounded-2xl border border-[#e9e5da] bg-white text-left transition duration-200 hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#244C3A]"
               >
                 {place.photo_url ? (
                   <img
@@ -365,35 +376,33 @@ export default function PlacesPage() {
                   </div>
                 )}
 
-                <div className="p-5">
-                  <h3 className="font-heading text-base font-bold">
+                <div className="p-4 sm:p-5">
+                  <h3 className="break-words font-heading text-base font-bold">
                     {place.name}
                   </h3>
 
                   <p className="mt-2 flex items-start gap-2 text-xs leading-relaxed text-gray-500">
-                    <MapPin size={15} className="mt-0.5 shrink-0" />
-                    <span>
-                      {[
-                        place.city,
-                        place.provinces?.name,
-                        place.countries?.name,
-                      ]
-                        .filter(Boolean)
-                        .join(', ') || 'Lokasi belum diisi'}
+                    <MapPin
+                      size={15}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span className="break-words">
+                      {getPlaceLocation(place)}
                     </span>
                   </p>
 
                   {place.description && (
-                    <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-gray-500">
+                    <p className="mt-3 line-clamp-2 break-words text-sm leading-relaxed text-gray-500">
                       {place.description}
                     </p>
                   )}
 
-                  <div className="mt-4 flex items-center justify-between border-t border-[#eeeae1] pt-4">
+                  <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#eeeae1] pt-4">
                     <span className="text-xs font-semibold text-[#244C3A]">
                       Lihat detail
                     </span>
-                    <span className="text-xs text-gray-400">
+
+                    <span className="text-right text-xs text-gray-400">
                       {place.visited_at
                         ? formatDate(place.visited_at)
                         : ''}
@@ -440,7 +449,7 @@ export default function PlacesPage() {
               </div>
             )}
 
-            <div className="space-y-6 p-6 sm:p-8">
+            <div className="space-y-6 p-5 sm:p-8">
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#e5ebdf] px-3 py-1 text-xs font-semibold text-[#244C3A]">
                   <Compass size={13} />
@@ -449,48 +458,65 @@ export default function PlacesPage() {
 
                 <h2
                   id="place-detail-title"
-                  className="mt-3 font-heading text-2xl font-bold text-[#244C3A] sm:text-3xl"
+                  className="mt-3 break-words font-heading text-2xl font-bold text-[#244C3A] sm:text-3xl"
                 >
                   {selectedPlace.name}
                 </h2>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
-                  <Globe2 size={19} className="mt-0.5 shrink-0 text-[#244C3A]" />
-                  <div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex min-w-0 items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
+                  <Globe2
+                    size={19}
+                    className="mt-0.5 shrink-0 text-[#244C3A]"
+                  />
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-400">Negara</p>
-                    <p className="mt-1 text-sm font-semibold">
+                    <p className="mt-1 break-words text-sm font-semibold">
                       {selectedPlace.countries?.name || '-'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
-                  <Building2 size={19} className="mt-0.5 shrink-0 text-[#244C3A]" />
-                  <div>
-                    <p className="text-xs text-gray-400">Provinsi</p>
-                    <p className="mt-1 text-sm font-semibold">
-                      {selectedPlace.provinces?.name || '-'}
-                    </p>
+                {selectedPlace.countries?.name?.trim().toLowerCase() ===
+                  'indonesia' && (
+                  <div className="flex min-w-0 items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
+                    <Building2
+                      size={19}
+                      className="mt-0.5 shrink-0 text-[#244C3A]"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-400">Provinsi</p>
+                      <p className="mt-1 break-words text-sm font-semibold">
+                        {selectedPlace.provinces?.name || '-'}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="flex items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
-                  <MapPin size={19} className="mt-0.5 shrink-0 text-[#244C3A]" />
-                  <div>
+                <div className="flex min-w-0 items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
+                  <MapPin
+                    size={19}
+                    className="mt-0.5 shrink-0 text-[#244C3A]"
+                  />
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-400">Kota</p>
-                    <p className="mt-1 text-sm font-semibold">
+                    <p className="mt-1 break-words text-sm font-semibold">
                       {selectedPlace.city || '-'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
-                  <CalendarDays size={19} className="mt-0.5 shrink-0 text-[#244C3A]" />
-                  <div>
-                    <p className="text-xs text-gray-400">Tanggal kunjungan</p>
-                    <p className="mt-1 text-sm font-semibold">
+                <div className="flex min-w-0 items-start gap-3 rounded-xl border border-[#e9e5da] bg-white p-4">
+                  <CalendarDays
+                    size={19}
+                    className="mt-0.5 shrink-0 text-[#244C3A]"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400">
+                      Tanggal kunjungan
+                    </p>
+                    <p className="mt-1 break-words text-sm font-semibold">
                       {selectedPlace.visited_at
                         ? formatDate(selectedPlace.visited_at)
                         : 'Belum diisi'}
@@ -504,7 +530,8 @@ export default function PlacesPage() {
                   <Navigation size={18} />
                   <h3 className="text-sm font-bold">Alamat</h3>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">
+
+                <p className="mt-2 break-words text-sm leading-relaxed text-gray-600">
                   {selectedPlace.address || 'Alamat belum diisi.'}
                 </p>
               </div>
@@ -513,8 +540,10 @@ export default function PlacesPage() {
                 <h3 className="font-heading text-base font-bold text-[#244C3A]">
                   Tentang tempat ini
                 </h3>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-gray-600">
-                  {selectedPlace.description || 'Belum ada deskripsi untuk tempat ini.'}
+
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-gray-600">
+                  {selectedPlace.description ||
+                    'Belum ada deskripsi untuk tempat ini.'}
                 </p>
               </div>
 

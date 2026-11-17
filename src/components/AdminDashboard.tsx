@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   Database,
   Upload,
+  Settings,
+  LockKeyhole,
+  ChevronRight,
 } from 'lucide-react'
 
 import { getDestinations } from '../lib/destinationsApi'
@@ -43,6 +46,8 @@ type Destination = {
   countries: { name: string } | null
 }
 
+type AdminTab = 'destinations' | 'places' | 'settings'
+
 export default function AdminDashboard({ token }: { token: string }) {
   const [destinations, setDestinations] = useState<Destination[]>([])
   const [places, setPlaces] = useState<Place[]>([])
@@ -62,11 +67,15 @@ export default function AdminDashboard({ token }: { token: string }) {
   const [backupLoading, setBackupLoading] = useState(false)
   const [restoreLoading, setRestoreLoading] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<'destinations' | 'places'>(
-    'destinations'
-  )
+  const [activeTab, setActiveTab] = useState<AdminTab>('destinations')
 
   function handleLogout() {
+    if (
+      !window.confirm('Yakin ingin keluar dari panel Admin?')
+    ) {
+      return
+    }
+
     sessionStorage.removeItem('journeybase_admin_token')
     window.location.reload()
   }
@@ -132,7 +141,6 @@ export default function AdminDashboard({ token }: { token: string }) {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-
       URL.revokeObjectURL(url)
 
       alert(
@@ -149,11 +157,11 @@ export default function AdminDashboard({ token }: { token: string }) {
     }
   }
 
-async function handleImportBackup(
-  event: ChangeEvent<HTMLInputElement>
-) {
-  const input = event.currentTarget
-  const file = input.files?.[0]
+  async function handleImportBackup(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const input = event.currentTarget
+    const file = input.files?.[0]
 
     if (!file) return
 
@@ -182,15 +190,11 @@ async function handleImportBackup(
       }
 
       if (backupData.application !== 'JOURNEYBASE') {
-        throw new Error(
-          'File ini bukan backup dari JOURNEYBASE.'
-        )
+        throw new Error('File ini bukan backup dari JOURNEYBASE.')
       }
 
       if (backupData.backup_version !== 1) {
-        throw new Error(
-          'Versi backup tidak didukung.'
-        )
+        throw new Error('Versi backup tidak didukung.')
       }
 
       if (
@@ -211,9 +215,7 @@ async function handleImportBackup(
         !Array.isArray(data.destinations) ||
         !Array.isArray(data.places)
       ) {
-        throw new Error(
-          'Data Destinations atau Places tidak valid.'
-        )
+        throw new Error('Data Destinations atau Places tidak valid.')
       }
 
       const destinationCount = data.destinations.length
@@ -227,12 +229,12 @@ async function handleImportBackup(
 
       const confirmed = window.confirm(
         `Pulihkan backup JOURNEYBASE ini?\n\n` +
-        `Destinations: ${destinationCount}\n` +
-        `Places: ${placeCount}\n\n` +
-        `Data dengan ID yang sama akan diperbarui.\n` +
-        `Data baru akan ditambahkan.\n` +
-        `Data lain yang tidak ada di backup tidak akan dihapus.\n\n` +
-        `Pastikan kamu sudah memiliki backup terbaru sebelum melanjutkan.`
+          `Destinations: ${destinationCount}\n` +
+          `Places: ${placeCount}\n\n` +
+          `Data dengan ID yang sama akan diperbarui.\n` +
+          `Data baru akan ditambahkan.\n` +
+          `Data lain yang tidak ada di backup tidak akan dihapus.\n\n` +
+          `Pastikan kamu sudah memiliki backup terbaru sebelum melanjutkan.`
       )
 
       if (!confirmed) return
@@ -248,9 +250,9 @@ async function handleImportBackup(
 
       alert(
         `Restore berhasil diproses!\n\n` +
-        `Destinations: ${destinationCount}\n` +
-        `Places: ${placeCount}\n\n` +
-        `Dashboard sudah diperbarui.`
+          `Destinations: ${destinationCount}\n` +
+          `Places: ${placeCount}\n\n` +
+          `Data dashboard sudah diperbarui.`
       )
     } catch (err) {
       alert(
@@ -259,9 +261,9 @@ async function handleImportBackup(
           : 'Gagal melakukan restore backup.'
       )
     } finally {
-  setRestoreLoading(false)
-  input.value = ''
-}
+      setRestoreLoading(false)
+      input.value = ''
+    }
   }
 
   async function handleDeleteDestination(id: string, name: string) {
@@ -341,16 +343,27 @@ async function handleImportBackup(
     return matchesSearch && matchesCountry
   })
 
+  const tabItems = [
+    { id: 'destinations' as const, label: 'Destinations', icon: MapPin },
+    { id: 'places' as const, label: 'Places', icon: Compass },
+    { id: 'settings' as const, label: 'Pengaturan', icon: Settings },
+  ]
+
   return (
-    <div className="min-h-screen space-y-7 bg-[#F7F5EF] p-5 md:p-10">
+    <div className="min-h-screen space-y-7 bg-[#F7F5EF] p-4 sm:p-5 md:p-10">
+      {/* HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-gray-500">JOURNEYBASE / ADMIN</p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#244C3A]">
-            Dashboard Admin
+            {activeTab === 'settings'
+              ? 'Pengaturan Admin'
+              : 'Dashboard Admin'}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Kelola destinasi dan tempat perjalananmu.
+            {activeTab === 'settings'
+              ? 'Kelola keamanan, data, dan informasi aplikasi.'
+              : 'Kelola destinasi dan tempat perjalananmu.'}
           </p>
         </div>
 
@@ -376,191 +389,43 @@ async function handleImportBackup(
             disabled={loading}
             className="flex items-center gap-2 rounded-xl border border-[#e9e5da] bg-white px-4 py-3 text-sm font-semibold hover:bg-[#f5f4ef] disabled:opacity-50"
           >
-            <RefreshCw size={16} />
+            <RefreshCw
+              size={16}
+              className={loading ? 'animate-spin' : ''}
+            />
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Backup & Restore */}
-      <section className="rounded-2xl border border-[#e9e5da] bg-white p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf0e8] text-[#244C3A]">
-              <Database size={22} />
-            </div>
+      {/* ADMIN NAVIGATION */}
+      <div className="flex gap-2 overflow-x-auto rounded-2xl border border-[#e9e5da] bg-white p-2">
+        {tabItems.map((tab) => {
+          const Icon = tab.icon
+          const active = activeTab === tab.id
 
-            <div>
-              <h2 className="font-heading text-lg font-bold text-[#244C3A]">
-                Backup & Restore Data
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-gray-500">
-                Simpan salinan data JOURNEYBASE dan pulihkan
-                kembali jika diperlukan.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
+          return (
             <button
-              onClick={handleExportBackup}
-              disabled={backupLoading || loading || restoreLoading}
-              className="flex items-center gap-2 rounded-xl bg-[#244C3A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#315d49] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {backupLoading ? (
-                <RefreshCw size={17} className="animate-spin" />
-              ) : (
-                <Download size={17} />
-              )}
-              {backupLoading ? 'Membuat Backup...' : 'Download Backup'}
-            </button>
-
-            <label
-              className={`flex cursor-pointer items-center gap-2 rounded-xl border border-[#244C3A] bg-white px-5 py-3 text-sm font-semibold text-[#244C3A] hover:bg-[#edf0e8] ${
-                restoreLoading || backupLoading || loading
-                  ? 'pointer-events-none opacity-50'
-                  : ''
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id)
+                setShowDestinationForm(false)
+                setEditingDestination(null)
+                setShowPlaceForm(false)
+                setEditingPlace(null)
+              }}
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                active
+                  ? 'bg-[#244C3A] text-white shadow-sm'
+                  : 'text-gray-500 hover:bg-[#f5f4ef] hover:text-[#244C3A]'
               }`}
             >
-              {restoreLoading ? (
-                <RefreshCw size={17} className="animate-spin" />
-              ) : (
-                <Upload size={17} />
-              )}
-              {restoreLoading ? 'Memulihkan...' : 'Restore Backup'}
-
-              <input
-                type="file"
-                accept=".json,application/json"
-                onChange={handleImportBackup}
-                disabled={restoreLoading || backupLoading || loading}
-                className="hidden"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl bg-[#f7f5ef] p-4">
-            <p className="text-xs text-gray-500">Destinations</p>
-            <p className="mt-1 text-xl font-bold text-[#244C3A]">
-              {destinations.length}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-[#f7f5ef] p-4">
-            <p className="text-xs text-gray-500">Places</p>
-            <p className="mt-1 text-xl font-bold text-[#244C3A]">
-              {places.length}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-[#f7f5ef] p-4">
-            <div className="flex items-center gap-2 text-[#477c58]">
-              <ShieldCheck size={16} />
-              <p className="text-xs font-semibold">Format JSON</p>
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              File dapat disimpan sebagai cadangan.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 space-y-2 text-xs leading-relaxed text-gray-500">
-          <p>
-            Backup mencakup data Destinations dan Places beserta
-            informasi lokasi dan URL foto. File foto fisik tidak
-            disalin.
-          </p>
-          <p>
-            Restore akan menambahkan data baru dan memperbarui data
-            dengan ID yang sama. Data yang tidak ada di file backup
-            tidak akan dihapus.
-          </p>
-        </div>
-      </section>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[#e9e5da] bg-white p-6">
-          <div className="flex items-center gap-3 text-[#b38b35]">
-            <Heart size={21} />
-            <span className="text-sm font-semibold">Wishlist</span>
-          </div>
-          <p className="mt-4 font-heading text-3xl font-bold">
-            {wishlistCount}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Destinasi direncanakan
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[#e9e5da] bg-white p-6">
-          <div className="flex items-center gap-3 text-[#477c58]">
-            <CheckCircle2 size={21} />
-            <span className="text-sm font-semibold">Visited</span>
-          </div>
-          <p className="mt-4 font-heading text-3xl font-bold">
-            {visitedCount}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Destinasi dikunjungi
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[#e9e5da] bg-white p-6">
-          <div className="flex items-center gap-3 text-blue-600">
-            <Compass size={21} />
-            <span className="text-sm font-semibold">Places</span>
-          </div>
-          <p className="mt-4 font-heading text-3xl font-bold">
-            {places.length}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Tempat tersimpan
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex rounded-xl border border-[#e9e5da] bg-white p-1">
-          <button
-            onClick={() => setActiveTab('destinations')}
-            className={`rounded-lg px-4 py-2.5 text-sm font-semibold ${
-              activeTab === 'destinations'
-                ? 'bg-[#244C3A] text-white'
-                : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            Destinations
-          </button>
-
-          <button
-            onClick={() => setActiveTab('places')}
-            className={`rounded-lg px-4 py-2.5 text-sm font-semibold ${
-              activeTab === 'places'
-                ? 'bg-[#244C3A] text-white'
-                : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            Places
-          </button>
-        </div>
-
-        <button
-          onClick={() => {
-            if (activeTab === 'destinations') {
-              setEditingDestination(null)
-              setShowDestinationForm(true)
-            } else {
-              setEditingPlace(null)
-              setShowPlaceForm(true)
-            }
-          }}
-          className="flex items-center gap-2 rounded-xl bg-[#244C3A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#315d49]"
-        >
-          <Plus size={17} />
-          Tambah {activeTab === 'destinations' ? 'Destinasi' : 'Places'}
-        </button>
+              <Icon size={17} />
+              {tab.label}
+              {active && <ChevronRight size={15} />}
+            </button>
+          )
+        })}
       </div>
 
       {error && (
@@ -569,8 +434,67 @@ async function handleImportBackup(
         </p>
       )}
 
+      {/* DESTINATIONS TAB */}
       {activeTab === 'destinations' && (
         <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-[#e9e5da] bg-white p-5 sm:p-6">
+              <div className="flex items-center gap-3 text-[#b38b35]">
+                <Heart size={21} />
+                <span className="text-sm font-semibold">Wishlist</span>
+              </div>
+              <p className="mt-4 font-heading text-3xl font-bold">
+                {wishlistCount}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Destinasi direncanakan
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#e9e5da] bg-white p-5 sm:p-6">
+              <div className="flex items-center gap-3 text-[#477c58]">
+                <CheckCircle2 size={21} />
+                <span className="text-sm font-semibold">Visited</span>
+              </div>
+              <p className="mt-4 font-heading text-3xl font-bold">
+                {visitedCount}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Destinasi dikunjungi
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#e9e5da] bg-white p-5 sm:p-6">
+              <div className="flex items-center gap-3 text-blue-600">
+                <Compass size={21} />
+                <span className="text-sm font-semibold">Places</span>
+              </div>
+              <p className="mt-4 font-heading text-3xl font-bold">
+                {places.length}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Tempat tersimpan
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-heading text-lg font-bold text-[#244C3A]">
+              Semua Destinasi
+            </h2>
+
+            <button
+              onClick={() => {
+                setEditingDestination(null)
+                setShowDestinationForm(true)
+              }}
+              className="flex items-center gap-2 rounded-xl bg-[#244C3A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#315d49]"
+            >
+              <Plus size={17} />
+              Tambah Destinasi
+            </button>
+          </div>
+
           {(showDestinationForm || editingDestination) && (
             <DestinationForm
               token={token}
@@ -587,12 +511,15 @@ async function handleImportBackup(
             />
           )}
 
-          <section className="rounded-2xl border border-[#e9e5da] bg-white p-6">
+          <section className="rounded-2xl border border-[#e9e5da] bg-white p-5 sm:p-6">
             <div className="mb-5 flex items-center gap-2">
               <MapPin size={20} />
               <h2 className="font-heading text-lg font-bold">
-                Semua Destinasi
+                Daftar Destinasi
               </h2>
+              <span className="ml-auto text-xs text-gray-500">
+                {destinations.length} destinasi
+              </span>
             </div>
 
             {loading ? (
@@ -608,22 +535,24 @@ async function handleImportBackup(
                 {destinations.map((item) => (
                   <div
                     key={item.id}
-                    className="flex flex-wrap items-center gap-4 rounded-xl border border-[#eeeae1] p-3"
+                    className="flex flex-wrap items-center gap-3 rounded-xl border border-[#eeeae1] p-3"
                   >
                     {item.photo_url ? (
                       <img
                         src={item.photo_url}
                         alt={item.name}
-                        className="h-16 w-20 rounded-lg object-cover"
+                        className="h-16 w-20 shrink-0 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="flex h-16 w-20 items-center justify-center rounded-lg bg-[#edf0e8]">
+                      <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-lg bg-[#edf0e8]">
                         <MapPin size={22} />
                       </div>
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold">{item.name}</h3>
+                      <h3 className="break-words font-semibold">
+                        {item.name}
+                      </h3>
                       <p className="mt-1 text-xs text-gray-500">
                         {[item.city_region, item.countries?.name]
                           .filter(Boolean)
@@ -679,8 +608,31 @@ async function handleImportBackup(
         </>
       )}
 
+      {/* PLACES TAB */}
       {activeTab === 'places' && (
         <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-heading text-lg font-bold text-[#244C3A]">
+                Kelola Places
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Tambahkan dan kelola tempat yang tersimpan.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingPlace(null)
+                setShowPlaceForm(true)
+              }}
+              className="flex items-center gap-2 rounded-xl bg-[#244C3A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#315d49]"
+            >
+              <Plus size={17} />
+              Tambah Places
+            </button>
+          </div>
+
           {(showPlaceForm || editingPlace) && (
             <PlaceForm
               token={token}
@@ -697,7 +649,7 @@ async function handleImportBackup(
             />
           )}
 
-          <section className="rounded-2xl border border-[#e9e5da] bg-white p-6">
+          <section className="rounded-2xl border border-[#e9e5da] bg-white p-5 sm:p-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Compass size={20} />
@@ -785,74 +737,304 @@ async function handleImportBackup(
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredPlaces.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-wrap items-center gap-4 rounded-xl border border-[#eeeae1] p-3"
-                  >
-                    {item.photo_url ? (
-                      <img
-                        src={item.photo_url}
-                        alt={item.name}
-                        className="h-16 w-20 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-20 items-center justify-center rounded-lg bg-[#edf0e8]">
-                        <MapPin size={22} />
-                      </div>
-                    )}
+                {filteredPlaces.map((item) => {
+                  const isIndonesia =
+                    item.countries?.name?.trim().toLowerCase() ===
+                    'indonesia'
 
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold">{item.name}</h3>
-                      <p className="mt-1 text-xs text-gray-500">
-                        {[
-                          item.city,
-                          item.provinces?.name,
-                          item.countries?.name,
-                        ]
-                          .filter(Boolean)
-                          .join(', ') || 'Lokasi belum diisi'}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setEditingPlace(item)
-                        setShowPlaceForm(false)
-                      }}
-                      className="flex items-center gap-1 rounded-lg border border-[#e9e5da] px-3 py-2 text-xs font-semibold hover:bg-[#f5f4ef]"
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-wrap items-center gap-3 rounded-xl border border-[#eeeae1] p-3"
                     >
-                      <Pencil size={13} />
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleDeletePlace(item.id, item.name)
-                      }
-                      className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 size={13} />
-                      Hapus
-                    </button>
-
-                    {item.latitude !== null &&
-                      item.longitude !== null && (
-                        <a
-                          href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
-                        >
-                          Google Maps
-                        </a>
+                      {item.photo_url ? (
+                        <img
+                          src={item.photo_url}
+                          alt={item.name}
+                          className="h-16 w-20 shrink-0 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-lg bg-[#edf0e8]">
+                          <MapPin size={22} />
+                        </div>
                       )}
-                  </div>
-                ))}
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words font-semibold">
+                          {item.name}
+                        </h3>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {[
+                            item.city,
+                            isIndonesia ? item.provinces?.name : null,
+                            item.countries?.name,
+                          ]
+                            .filter(Boolean)
+                            .join(', ') || 'Lokasi belum diisi'}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setEditingPlace(item)
+                          setShowPlaceForm(false)
+                        }}
+                        className="flex items-center gap-1 rounded-lg border border-[#e9e5da] px-3 py-2 text-xs font-semibold hover:bg-[#f5f4ef]"
+                      >
+                        <Pencil size={13} />
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleDeletePlace(item.id, item.name)
+                        }
+                        className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 size={13} />
+                        Hapus
+                      </button>
+
+                      {item.latitude !== null &&
+                        item.longitude !== null && (
+                          <a
+                            href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                          >
+                            Google Maps
+                          </a>
+                        )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </section>
         </>
+      )}
+
+      {/* SETTINGS TAB */}
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="font-heading text-xl font-bold text-[#244C3A]">
+              Pengaturan JOURNEYBASE
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Pengaturan ini hanya tersedia untuk Admin.
+            </p>
+          </div>
+
+          {/* KEAMANAN ADMIN */}
+          <section className="rounded-2xl border border-[#e9e5da] bg-white p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf0e8] text-[#244C3A]">
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <h3 className="font-heading text-lg font-bold text-[#244C3A]">
+                  Keamanan Admin
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Informasi akses dan sesi administrator.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-[#f7f5ef] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-700">
+                  <LockKeyhole size={19} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#244C3A]">
+                    Sesi Admin
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Kamu sedang masuk sebagai administrator.
+                  </p>
+                </div>
+              </div>
+
+              <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700">
+                Aktif
+              </span>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[#eeeae1] p-4">
+              <p className="text-sm font-semibold text-[#244C3A]">
+                Hak akses administrator
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                Admin memiliki akses untuk menambah, mengubah, menghapus,
+                serta memulihkan data Destinations dan Places.
+              </p>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            >
+              <LogOut size={17} />
+              Logout Admin
+            </button>
+          </section>
+
+          {/* DATA & BACKUP */}
+          <section className="rounded-2xl border border-[#e9e5da] bg-white p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf0e8] text-[#244C3A]">
+                <Database size={22} />
+              </div>
+              <div>
+                <h3 className="font-heading text-lg font-bold text-[#244C3A]">
+                  Data & Backup
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Kelola salinan dan pemulihan data JOURNEYBASE.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-[#f7f5ef] p-4">
+                <p className="text-xs text-gray-500">Total Destinations</p>
+                <p className="mt-1 text-2xl font-bold text-[#244C3A]">
+                  {destinations.length}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-[#f7f5ef] p-4">
+                <p className="text-xs text-gray-500">Total Wishlist</p>
+                <p className="mt-1 text-2xl font-bold text-[#244C3A]">
+                  {wishlistCount}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-[#f7f5ef] p-4">
+                <p className="text-xs text-gray-500">Total Places</p>
+                <p className="mt-1 text-2xl font-bold text-[#244C3A]">
+                  {places.length}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={handleExportBackup}
+                disabled={backupLoading || loading || restoreLoading}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#244C3A] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#315d49] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {backupLoading ? (
+                  <RefreshCw size={17} className="animate-spin" />
+                ) : (
+                  <Download size={17} />
+                )}
+                {backupLoading ? 'Membuat Backup...' : 'Download Backup'}
+              </button>
+
+              <label
+                className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#244C3A] bg-white px-5 py-3.5 text-sm font-semibold text-[#244C3A] transition hover:bg-[#edf0e8] ${
+                  restoreLoading || backupLoading || loading
+                    ? 'pointer-events-none opacity-50'
+                    : ''
+                }`}
+              >
+                {restoreLoading ? (
+                  <RefreshCw size={17} className="animate-spin" />
+                ) : (
+                  <Upload size={17} />
+                )}
+                {restoreLoading ? 'Memulihkan...' : 'Restore Backup'}
+
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleImportBackup}
+                  disabled={restoreLoading || backupLoading || loading}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 space-y-2 rounded-xl border border-[#eeeae1] p-4 text-xs leading-relaxed text-gray-500">
+              <p>
+                <strong className="text-[#244C3A]">Backup:</strong>{' '}
+                mengunduh salinan data Destinations dan Places dalam format
+                JSON, termasuk informasi lokasi dan URL foto.
+              </p>
+              <p>
+                <strong className="text-[#244C3A]">Restore:</strong>{' '}
+                menambahkan data baru dan memperbarui data dengan ID yang
+                sama. Data lain yang tidak ada di file backup tidak akan
+                dihapus.
+              </p>
+              <p>
+                File foto fisik tidak disalin ke dalam file backup. Foto
+                tetap menggunakan URL penyimpanan yang tersimpan.
+              </p>
+            </div>
+          </section>
+
+          {/* TENTANG APLIKASI */}
+          <section className="overflow-hidden rounded-2xl border border-[#e9e5da] bg-white">
+            <div className="bg-[#244C3A] p-6 text-white sm:p-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15">
+                <Compass size={30} />
+              </div>
+
+              <h3 className="mt-5 font-heading text-2xl font-extrabold tracking-wider">
+                JOURNEYBASE
+              </h3>
+              <p className="mt-1 text-xs tracking-[0.2em] text-white/70">
+                YOUR WORLD, YOUR JOURNEY.
+              </p>
+
+              <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/80">
+                Website personal travel wishlist dan tracker untuk
+                menyimpan destinasi impian, mencatat tempat yang sudah
+                dikunjungi, serta menjelajahi berbagai tempat di dunia.
+              </p>
+            </div>
+
+            <div className="space-y-4 p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-500">
+                  Nama aplikasi
+                </span>
+                <span className="text-sm font-semibold text-[#244C3A]">
+                  JOURNEYBASE
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-500">
+                  Versi aplikasi
+                </span>
+                <span className="rounded-full bg-[#edf0e8] px-3 py-1 text-xs font-bold text-[#244C3A]">
+                  Version 1.0.0
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-500">
+                  Created by
+                </span>
+                <span className="text-sm font-semibold text-[#244C3A]">
+                  FhrzaaA
+                </span>
+              </div>
+
+              <div className="border-t border-[#eeeae1]" />
+
+              <p className="text-center text-xs text-gray-400">
+                © {new Date().getFullYear()} JOURNEYBASE. All rights reserved.
+              </p>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   )

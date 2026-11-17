@@ -1,6 +1,5 @@
 
 import { useEffect, useState } from 'react'
-import { getDestinations } from './lib/destinationsApi'
 import { testConnection } from './lib/testConnection'
 import AdminLogin from './components/AdminLogin'
 import AdminDashboard from './components/AdminDashboard'
@@ -11,6 +10,7 @@ import DashboardPage from './components/DashboardPage'
 import ActivityPage from './components/ActivityPage'
 import { getActivities, type Activity } from './lib/activityApi'
 import { getGlobalSearchResults, type SearchResult } from './lib/globalSearchApi'
+import { getDestinations } from './lib/destinationsApi'
 
 import {
   LayoutDashboard,
@@ -19,7 +19,6 @@ import {
   Heart,
   CheckCircle2,
   BarChart3,
-  Settings,
   Search,
   LockKeyhole,
   Bell,
@@ -690,13 +689,6 @@ function App() {
           </div>
 
           <button
-            onClick={() => navigate('Pengaturan')}
-            className="mt-4 flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-500"
-          >
-            <Settings size={17} /> Pengaturan
-          </button>
-
-          <button
             onClick={() => {
               setIsAdminLogin(true)
               setMobileMenu(false)
@@ -848,6 +840,7 @@ function App() {
               )}
             </div>
 
+            {/* NOTIFIKASI */}
             <div className="relative">
               <button
                 onClick={() => {
@@ -860,6 +853,7 @@ function App() {
                 }}
                 className="relative rounded-full border border-[#e4dfd2] p-2.5 transition hover:bg-white"
                 aria-label="Notifikasi"
+                aria-expanded={notificationsOpen}
               >
                 <Bell size={18} />
 
@@ -869,100 +863,110 @@ function App() {
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 top-14 z-50 w-[320px] overflow-hidden rounded-2xl border border-[#e9e5da] bg-white shadow-xl sm:w-[360px]">
-                  <div className="flex items-center justify-between border-b border-[#eeeae0] p-4">
-                    <div>
-                      <h3 className="font-heading font-bold text-forest">
-                        Notifikasi
-                      </h3>
-                      <p className="text-xs text-[#85877f]">
-                        Aktivitas terbaru JOURNEYBASE
-                      </p>
+                <>
+                  <button
+                    type="button"
+                    aria-label="Tutup notifikasi"
+                    onClick={() => setNotificationsOpen(false)}
+                    className="fixed inset-0 z-40 cursor-default"
+                  />
+
+                  {/* DROPDOWN NOTIFIKASI - POSISI RESPONSIVE */}
+                  <div className="fixed right-3 top-[76px] z-50 w-[calc(100vw-24px)] max-w-[360px] overflow-hidden rounded-2xl border border-[#e9e5da] bg-white shadow-xl sm:right-5 md:right-8">
+                    <div className="flex items-center justify-between border-b border-[#eeeae0] p-4">
+                      <div className="min-w-0">
+                        <h3 className="font-heading font-bold text-forest">
+                          Notifikasi
+                        </h3>
+                        <p className="text-xs text-[#85877f]">
+                          Aktivitas terbaru JOURNEYBASE
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={loadNotifications}
+                        disabled={notificationLoading}
+                        className="ml-2 shrink-0 rounded-lg p-2 text-[#85877f] hover:bg-[#f5f4ef]"
+                        title="Refresh"
+                      >
+                        <RefreshCw
+                          size={16}
+                          className={notificationLoading ? 'animate-spin' : ''}
+                        />
+                      </button>
+                    </div>
+
+                    <div className="max-h-[min(360px,60vh)] overflow-y-auto">
+                      {notificationLoading ? (
+                        <p className="p-6 text-center text-sm text-[#85877f]">
+                          Memuat notifikasi...
+                        </p>
+                      ) : recentActivities.length === 0 ? (
+                        <div className="p-7 text-center">
+                          <Bell
+                            size={25}
+                            className="mx-auto mb-2 text-[#a8b9a0]"
+                          />
+                          <p className="text-sm font-semibold text-forest">
+                            Belum ada aktivitas
+                          </p>
+                          <p className="mt-1 text-xs text-[#85877f]">
+                            Aktivitas terbaru akan muncul di sini.
+                          </p>
+                        </div>
+                      ) : (
+                        recentActivities.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              navigate('Riwayat Aktivitas')
+                              setNotificationsOpen(false)
+                            }}
+                            className="flex w-full gap-3 border-b border-[#f1eee7] p-4 text-left transition hover:bg-[#f8f7f2]"
+                          >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf2e9] text-forest">
+                              <Bell size={16} />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-forest">
+                                {item.entity_name}
+                              </p>
+                              <p className="mt-1 line-clamp-2 text-xs text-[#85877f]">
+                                {item.description || 'Ada aktivitas baru.'}
+                              </p>
+                              <p className="mt-2 text-[10px] text-[#a0a398]">
+                                {new Date(item.created_at).toLocaleString(
+                                  'id-ID',
+                                  {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      )}
                     </div>
 
                     <button
-                      onClick={loadNotifications}
-                      disabled={notificationLoading}
-                      className="rounded-lg p-2 text-[#85877f] hover:bg-[#f5f4ef]"
-                      title="Refresh"
+                      onClick={() => {
+                        navigate('Riwayat Aktivitas')
+                        setNotificationsOpen(false)
+                      }}
+                      className="w-full bg-[#f7f6f1] p-3 text-center text-sm font-semibold text-forest hover:bg-[#eeede5]"
                     >
-                      <RefreshCw
-                        size={16}
-                        className={notificationLoading ? 'animate-spin' : ''}
-                      />
+                      Lihat Semua Aktivitas
                     </button>
                   </div>
-
-                  <div className="max-h-[360px] overflow-y-auto">
-                    {notificationLoading ? (
-                      <p className="p-6 text-center text-sm text-[#85877f]">
-                        Memuat notifikasi...
-                      </p>
-                    ) : recentActivities.length === 0 ? (
-                      <div className="p-7 text-center">
-                        <Bell
-                          size={25}
-                          className="mx-auto mb-2 text-[#a8b9a0]"
-                        />
-                        <p className="text-sm font-semibold text-forest">
-                          Belum ada aktivitas
-                        </p>
-                        <p className="mt-1 text-xs text-[#85877f]">
-                          Aktivitas terbaru akan muncul di sini.
-                        </p>
-                      </div>
-                    ) : (
-                      recentActivities.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            navigate('Riwayat Aktivitas')
-                            setNotificationsOpen(false)
-                          }}
-                          className="flex w-full gap-3 border-b border-[#f1eee7] p-4 text-left transition hover:bg-[#f8f7f2]"
-                        >
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf2e9] text-forest">
-                            <Bell size={16} />
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-forest">
-                              {item.entity_name}
-                            </p>
-                            <p className="mt-1 line-clamp-2 text-xs text-[#85877f]">
-                              {item.description || 'Ada aktivitas baru.'}
-                            </p>
-                            <p className="mt-2 text-[10px] text-[#a0a398]">
-                              {new Date(item.created_at).toLocaleString(
-                                'id-ID',
-                                {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                }
-                              )}
-                            </p>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      navigate('Riwayat Aktivitas')
-                      setNotificationsOpen(false)
-                    }}
-                    className="w-full bg-[#f7f6f1] p-3 text-center text-sm font-semibold text-forest hover:bg-[#eeede5]"
-                  >
-                    Lihat Semua Aktivitas
-                  </button>
-                </div>
+                </>
               )}
             </div>
 
-            {/* Tombol profil JOURNEYBASE */}
+            {/* TENTANG JOURNEYBASE */}
             <div className="relative">
               <button
                 type="button"
